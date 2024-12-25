@@ -4,17 +4,15 @@ from enum import Enum
 class State(str, Enum):
     NONE = "none"
 
+    # bet_creator_router states
     AWAITING_BET_DESCRIPTION = "awaiting_bet_description"
     AWAITING_BET_OPTION = "awaiting_bet_option"
     AWAITING_EDITED_BET_OPTION = "awaiting_edited_bet_option"
 
+    # wager_maker_router states
+    AWAITING_WAGER_ETHER_AMOUNT = "awaiting_wager_ether_amount"
 
-
-    MAKING_BET = "making_bet"
-    CHOOSING_BET_ID = "choosing_bet_id"
-    CHOOSING_ETHER_AMOUNT_TO_BET = "choosing_ether_amount_to_bet"
-
-    REGISTERING = "registering"
+    # REGISTERING = "registering"
 
 
 class ConversationStatesHolder:

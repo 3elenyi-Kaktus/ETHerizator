@@ -6,12 +6,15 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Update
 
+from storage.bet import Bet
 from helpers import delete_markup
 from state_holders.states import state_holder, State
 from state_holders.messages import message_holder
 from state_holders.callbacks import Callback
+from storage.storage import storage
 
-bet_create_router = Router(name=__name__)
+
+bet_creator_router = Router(name=__name__)
 
 
 @dataclass
@@ -41,16 +44,16 @@ def at_exit(user_id: int):
     state_holder.set_state(user_id, State.NONE)
 
 
-@bet_create_router.message(Command("view_create_bet_router"))
-async def view_create_bet_router(message: Message) -> None:
-    logging.info(f"view_create_bet_router")
+@bet_creator_router.message(Command("view_bet_creator_router"))
+async def view_bet_creator_router(message: Message) -> None:
+    logging.info(f"view_bet_creator_router")
     _ = await message.answer(
         f"Last messages: {json.dumps(message_holder, indent=4)}\n"
         f"Bet cache: {json.dumps(bet_drafts, indent=4)}\n"
-        f"States: {json.dumps(state_holder, indent=4)}\n")
+        f"States: {json.dumps(state_holder, indent=4)}")
 
 
-@bet_create_router.message(Command("create_bet"))
+@bet_creator_router.message(Command("create_bet"))
 async def create_bet(message: Message) -> None:
     logging.info(f"create_bet")
     user_id: int = message.from_user.id
@@ -63,10 +66,10 @@ async def create_bet(message: Message) -> None:
     message_holder.set_message(user_id, answer)
 
 
-@bet_create_router.message(
+@bet_creator_router.message(
     lambda x: state_holder.get_state(x.from_user.id) in [State.AWAITING_BET_DESCRIPTION, State.AWAITING_BET_OPTION] or
               state_holder.get_state(x.from_user.id).startswith(State.AWAITING_EDITED_BET_OPTION))
-@bet_create_router.callback_query(
+@bet_creator_router.callback_query(
     lambda x: x.data == Callback.DISCARD_CURRENT_BET_CHANGES or
               x.data.startswith(Callback.DELETE_BET_OPTION))
 async def update_bet_info(update: Update) -> None:
@@ -123,7 +126,7 @@ async def update_bet_info(update: Update) -> None:
     message_holder.set_message(user_id, answer)
 
 
-@bet_create_router.callback_query(F.data == Callback.EDIT_BET_DESCRIPTION)
+@bet_creator_router.callback_query(F.data == Callback.EDIT_BET_DESCRIPTION)
 async def edit_bet_description(callback_query: CallbackQuery) -> None:
     logging.info(f"edit_bet_description")
     user_id: int = callback_query.from_user.id
@@ -137,7 +140,7 @@ async def edit_bet_description(callback_query: CallbackQuery) -> None:
     message_holder.set_message(user_id, edited)
 
 
-@bet_create_router.callback_query(F.data == Callback.ADD_BET_OPTION)
+@bet_creator_router.callback_query(F.data == Callback.ADD_BET_OPTION)
 async def add_bet_option(callback_query: CallbackQuery) -> None:
     logging.info(f"add_bet_option")
     user_id: int = callback_query.from_user.id
@@ -150,7 +153,7 @@ async def add_bet_option(callback_query: CallbackQuery) -> None:
     message_holder.set_message(user_id, edited)
 
 
-@bet_create_router.callback_query(F.data == Callback.ENTER_EDIT_BET_OPTIONS_SELECTION)
+@bet_creator_router.callback_query(F.data == Callback.ENTER_EDIT_BET_OPTIONS_SELECTION)
 async def enter_edit_bet_option_selection(callback_query: CallbackQuery) -> None:
     logging.info(f"enter_edit_bet_option_selection")
     user_id: int = callback_query.from_user.id
@@ -165,7 +168,7 @@ async def enter_edit_bet_option_selection(callback_query: CallbackQuery) -> None
     message_holder.set_message(user_id, edited)
 
 
-@bet_create_router.callback_query(F.data == Callback.ENTER_DELETE_BET_OPTIONS_SELECTION)
+@bet_creator_router.callback_query(F.data == Callback.ENTER_DELETE_BET_OPTIONS_SELECTION)
 async def enter_delete_bet_option_selection(callback_query: CallbackQuery) -> None:
     logging.info(f"enter_delete_bet_option_selection")
     user_id: int = callback_query.from_user.id
@@ -180,7 +183,7 @@ async def enter_delete_bet_option_selection(callback_query: CallbackQuery) -> No
     message_holder.set_message(user_id, edited)
 
 
-@bet_create_router.callback_query(F.data.startswith(Callback.EDIT_BET_OPTION))
+@bet_creator_router.callback_query(F.data.startswith(Callback.EDIT_BET_OPTION))
 async def edit_bet_option(callback_query: CallbackQuery) -> None:
     logging.info(f"edit_bet_option")
     user_id: int = callback_query.from_user.id
@@ -195,7 +198,7 @@ async def edit_bet_option(callback_query: CallbackQuery) -> None:
     message_holder.set_message(user_id, edited)
 
 
-@bet_create_router.callback_query(F.data == Callback.CANCEL_BET_CREATION)
+@bet_creator_router.callback_query(F.data == Callback.CANCEL_BET_CREATION)
 async def cancel_bet_creation(callback_query: CallbackQuery) -> None:
     logging.info(f"cancel_bet_creation")
     user_id: int = callback_query.from_user.id
@@ -204,18 +207,20 @@ async def cancel_bet_creation(callback_query: CallbackQuery) -> None:
     at_exit(user_id)
 
 
-@bet_create_router.callback_query(F.data == Callback.APPROVE_BET_CREATION)
+@bet_creator_router.callback_query(F.data == Callback.APPROVE_BET_CREATION)
 async def approve_bet_creation(callback_query: CallbackQuery) -> None:
     logging.info(f"approve_bet_creation")
     user_id: int = callback_query.from_user.id
     await callback_query.answer(f"Creation approved...")
 
     #TODO send bet on blockchain
+    bet_id = len(storage.bets)
+    storage.bets[len(storage.bets)] = Bet(bet_id, bet_drafts[user_id].description, bet_drafts[user_id].options)
 
     # _ = storage.conn.createBet()
     # bet_id = len(storage.bets) + 1
     # storage.bets[bet_id] = Bet(bet_id, bet_drafts[callback_query.from_user.id][0],
     #                            [bet_drafts[callback_query.from_user.id][1], bet_drafts[callback_query.from_user.id][2]])
 
-    edited = await callback_query.message.edit_text(f"Bet was created! ID: {0}", reply_markup=None)
+    edited = await callback_query.message.edit_text(f"Bet was created! ID: {bet_id}", reply_markup=None)
     at_exit(user_id)
