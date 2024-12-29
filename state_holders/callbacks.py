@@ -14,6 +14,15 @@ class Callback(str, Enum):
     MANAGE_POLLS = "manage_polls"
     MANAGE_BETS = "manage_bets"
 
+    # authenticator router
+    RETURN_TO_AUTH_MENU = "return_to_auth_menu"
+    EXIT_AUTH_MENU = "exit_auth_menu"
+    REGISTER_NEW_ACCOUNT = "register_new_account"
+    LOG_IN_TO_ACCOUNT = "log_in_to_account"
+    DISCARD_REGISTER_USERNAME = "discard_register_username"
+    DISCARD_REGISTER_PASSWORD = "discard_register_password"
+    APPROVE_REGISTER = "approve_register"
+
     # poll_creator router callbacks
     CREATE_NEW_POLL = "create_new_poll"
     EDIT_POLL_DESCRIPTION = "edit_poll_description"

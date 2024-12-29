@@ -22,9 +22,12 @@ root_router = Router(name=__name__)
 @root_router.callback_query(F.data == Callback.RETURN_TO_MAIN_MENU)
 async def main_menu(update: Update) -> None:
     user_id = update.from_user.id
-    if user_id not in storage.balances.keys():
+    if user_id not in storage.active_mapping.keys():
         if isinstance(update, Message):
-            _ = await update.answer(f"You don't have an account yet, please register first (/start)", reply_markup=None)
+            _ = await update.answer(
+                f"Seems that you don't have an account yet, please register or sign in first (/start)",
+                reply_markup=None,
+            )
             return
         raise RuntimeError("User expected to be registered here")
     account_button = InlineKeyboardButton(text="Your account [x]", callback_data=Callback.OPEN_ACCOUNT_MENU)
@@ -41,10 +44,10 @@ async def main_menu(update: Update) -> None:
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
     if isinstance(update, Message):
         answer = await update.answer(f"Choose any activity you want:", reply_markup=markup)
-        message_holder.set_message(user_id, answer)
+        message_holder.set(user_id, answer)
     else:
         edited = await update.message.edit_text(f"Choose any activity you want:", reply_markup=markup)
-        message_holder.set_message(user_id, edited)
+        message_holder.set(user_id, edited)
 
 
 @root_router.callback_query(F.data == Callback.OPEN_POLLS_MENU)
@@ -60,4 +63,4 @@ async def open_polls_menu(callback_query: CallbackQuery) -> None:
     buttons = [[main_menu_button], [create_poll_button, vote_poll_button], [my_polls_button, my_votes_button]]
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
     answer = await callback_query.message.edit_text(f"Here you can create and manage polls, bets", reply_markup=markup)
-    message_holder.set_message(user_id, answer)
+    message_holder.set(user_id, answer)

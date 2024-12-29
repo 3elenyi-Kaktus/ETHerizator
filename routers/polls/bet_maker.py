@@ -35,9 +35,9 @@ bet_drafts: dict[int, BetDraft] = {}
 
 
 def at_exit(user_id: int):
-    message_holder.delete_message(user_id)
+    message_holder.delete(user_id)
     bet_drafts.pop(user_id, None)
-    state_holder.set_state(user_id, State.NONE)
+    state_holder.set(user_id, State.NONE)
 
 
 @bet_maker_router.message(Command("view_bet_maker_router"))
@@ -77,10 +77,10 @@ async def make_bet(update: Update) -> None:
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
     if isinstance(update, Message):
         answer = await update.answer(f"Please, select one of available polls:", reply_markup=markup)
-        message_holder.set_message(user_id, answer)
+        message_holder.set(user_id, answer)
     else:
         edited = await update.message.edit_text(f"Please, select one of available polls:", reply_markup=markup)
-        message_holder.set_message(user_id, edited)
+        message_holder.set(user_id, edited)
 
 
 @bet_maker_router.callback_query(
@@ -118,7 +118,7 @@ async def update_bet_info(callback_query: CallbackQuery) -> None:
         reply_text += f"  [{i}] (coeff: x{coeff:.2f}) -> {option.description}\n"
     reply_text.rstrip("\n")
     edited = await callback_query.message.edit_text(reply_text, reply_markup=markup)
-    message_holder.set_message(user_id, edited)
+    message_holder.set(user_id, edited)
 
 
 @bet_maker_router.callback_query(
@@ -146,7 +146,7 @@ async def choose_bet_option(callback_query: CallbackQuery) -> None:
 
     # user_balance = storage.conn.getBalance(callback_query.from_user.id)
 
-    state_holder.set_state(user_id, State.AWAITING_BET_WAGER_AMOUNT)
+    state_holder.set(user_id, State.AWAITING_BET_WAGER_AMOUNT)
     cancel_button = InlineKeyboardButton(text="Return", callback_data=Callback.DISCARD_BET_POLL_OPTION_CHANGES)
     markup = InlineKeyboardMarkup(inline_keyboard=[[cancel_button]])
     edited = await callback_query.message.edit_text(
@@ -159,15 +159,15 @@ async def choose_bet_option(callback_query: CallbackQuery) -> None:
         f"Please, enter how much ETH you want to bet:",
         reply_markup=markup,
     )
-    message_holder.set_message(user_id, edited)
+    message_holder.set(user_id, edited)
 
 
-@bet_maker_router.message(lambda x: state_holder.get_state(x.from_user.id) == State.AWAITING_BET_WAGER_AMOUNT)
+@bet_maker_router.message(lambda x: state_holder.get(x.from_user.id) == State.AWAITING_BET_WAGER_AMOUNT)
 async def awaiting_bet_wager_amount(message: Message) -> None:
     logging.info(f"awaiting_bet_wager_amount")
     user_id: int = message.from_user.id
 
-    await delete_markup(message_holder.get_message(user_id))
+    await delete_markup(message_holder.get(user_id))
     match = re.fullmatch(r"(\d+(\.\d+)?) ?([gG]?wei|[gG]?Wei|G?WEI|[eE]th|ETH)", message.text)
     if not match:
         cancel_button = InlineKeyboardButton(text="Return", callback_data=Callback.DISCARD_BET_POLL_OPTION_CHANGES)
@@ -175,7 +175,7 @@ async def awaiting_bet_wager_amount(message: Message) -> None:
         answer = await message.answer(
             f"Please, enter amount in the following format: number [wei|gwei|eth]", reply_markup=markup
         )
-        message_holder.set_message(user_id, answer)
+        message_holder.set(user_id, answer)
         return
 
     number, decimal, unit = match.groups()
@@ -188,7 +188,7 @@ async def awaiting_bet_wager_amount(message: Message) -> None:
             f"Please, enter amount in the following format: number [wei|gwei|eth]",
             reply_markup=markup,
         )
-        message_holder.set_message(user_id, answer)
+        message_holder.set(user_id, answer)
         return
 
     if decimal is not None:
@@ -200,7 +200,7 @@ async def awaiting_bet_wager_amount(message: Message) -> None:
     poll = storage.polls[poll_id]
     poll_option = bet_drafts[user_id].option_id
 
-    state_holder.set_state(user_id, State.NONE)
+    state_holder.set(user_id, State.NONE)
 
     cancel_button = InlineKeyboardButton(text="Return", callback_data=Callback.DISCARD_BET_WAGER_CHANGES)
     approve_button = InlineKeyboardButton(text="Approve", callback_data=Callback.APPROVE_BET_MAKING)
@@ -214,7 +214,7 @@ async def awaiting_bet_wager_amount(message: Message) -> None:
         f"Wager size: {ether_amount} ETH",
         reply_markup=markup,
     )
-    message_holder.set_message(user_id, answer)
+    message_holder.set(user_id, answer)
 
 
 @bet_maker_router.callback_query(F.data == Callback.CANCEL_BET_MAKING)

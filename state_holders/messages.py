@@ -5,13 +5,13 @@ class LastMessageHolder:
     def __init__(self):
         self.messages: dict[int, Message] = {}
 
-    def get_message(self, user_id: int) -> Message:
+    def get(self, user_id: int) -> Message:
         return self.messages.get(user_id, None)
 
-    def set_message(self, user_id: int, message: Message) -> None:
+    def set(self, user_id: int, message: Message) -> None:
         self.messages[user_id] = message
 
-    def delete_message(self, user_id: int) -> None:
+    def delete(self, user_id: int) -> None:
         self.messages.pop(user_id, None)
 
     def __json__(self):

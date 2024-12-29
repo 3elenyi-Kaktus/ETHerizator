@@ -1,7 +1,10 @@
 import logging
 from enum import IntEnum
+from typing import Optional
 
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardMarkup, Update
+
+from state_holders.messages import message_holder
 
 COLS_BUTTONS_MAX_NUM = 8
 BUTTONS_MAX_NUM = 100
@@ -15,6 +18,16 @@ async def delete_markup(message: Message):
     deleted = await message.delete_reply_markup()
     if isinstance(deleted, bool):
         logging.critical(f"Deleted markup from inline message! (ID: {message.message_id})")
+
+
+# if message reply caused by new Message from user - send new one, otherwise (by CallbackQuery) edit existing one
+async def handle_ambiguous_reply(user_id: int, update: Update, text: str, markup: Optional[InlineKeyboardMarkup]):
+    if isinstance(update, Message):
+        answer = await update.answer(text, reply_markup=markup)
+        message_holder.set(user_id, answer)
+    else:
+        edited = await update.message.edit_text(text, reply_markup=markup)
+        message_holder.set(user_id, edited)
 
 
 class EtherUnit(IntEnum):

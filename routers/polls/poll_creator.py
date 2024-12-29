@@ -38,9 +38,9 @@ poll_drafts: dict[int, PollDraft] = {}
 
 
 def at_exit(user_id: int):
-    message_holder.delete_message(user_id)
+    message_holder.delete(user_id)
     poll_drafts.pop(user_id, None)
-    state_holder.set_state(user_id, State.NONE)
+    state_holder.set(user_id, State.NONE)
 
 
 @poll_creator_router.message(Command("view_poll_creator_router"))
@@ -60,21 +60,19 @@ async def create_poll(update: Update) -> None:
     user_id: int = update.from_user.id
     button = InlineKeyboardButton(text="Cancel", callback_data=Callback.CANCEL_POLL_CREATION)
     markup = InlineKeyboardMarkup(inline_keyboard=[[button]])
-    state_holder.set_state(user_id, State.AWAITING_POLL_DESCRIPTION)
+    state_holder.set(user_id, State.AWAITING_POLL_DESCRIPTION)
     poll_drafts[user_id] = PollDraft("")
     if isinstance(update, Message):
         answer = await update.answer(f"Sure!\n" f"Please, enter poll description:", reply_markup=markup)
-        message_holder.set_message(user_id, answer)
+        message_holder.set(user_id, answer)
     else:
-        edited = await update.message.edit_text(
-            f"Sure!\n" f"Please, enter poll description:", reply_markup=markup
-        )
-        message_holder.set_message(user_id, edited)
+        edited = await update.message.edit_text(f"Sure!\n" f"Please, enter poll description:", reply_markup=markup)
+        message_holder.set(user_id, edited)
 
 
 @poll_creator_router.message(
-    lambda x: state_holder.get_state(x.from_user.id) in [State.AWAITING_POLL_DESCRIPTION, State.AWAITING_POLL_OPTION]
-    or state_holder.get_state(x.from_user.id).startswith(State.AWAITING_EDITED_POLL_OPTION)
+    lambda x: state_holder.get(x.from_user.id) in [State.AWAITING_POLL_DESCRIPTION, State.AWAITING_POLL_OPTION]
+    or state_holder.get(x.from_user.id).startswith(State.AWAITING_EDITED_POLL_OPTION)
 )
 @poll_creator_router.callback_query(
     lambda x: x.data == Callback.DISCARD_CURRENT_POLL_CHANGES or x.data.startswith(Callback.DELETE_POLL_OPTION)
@@ -85,19 +83,17 @@ async def update_poll_info(update: Update) -> None:
     if isinstance(update, Message):
         message: Message = update
         user_id: int = message.from_user.id
-        await delete_markup(message_holder.get_message(user_id))
-        match state_holder.get_state(user_id):
+        await delete_markup(message_holder.get(user_id))
+        match state_holder.get(user_id):
             case State.AWAITING_POLL_DESCRIPTION:
                 poll_drafts[user_id].description = message.text
             case State.AWAITING_POLL_OPTION:
                 poll_drafts[user_id].options.append(message.text)
             case s if s.startswith(State.AWAITING_EDITED_POLL_OPTION):
-                chosen_option: int = int(
-                    state_holder.get_state(user_id).lstrip(State.AWAITING_EDITED_POLL_OPTION + "_")
-                )
+                chosen_option: int = int(state_holder.get(user_id).lstrip(State.AWAITING_EDITED_POLL_OPTION + "_"))
                 poll_drafts[user_id].options[chosen_option - 1] = message.text
                 addon += f"Changed option [{chosen_option}] successfully\n"
-        state_holder.set_state(user_id, State.NONE)
+        state_holder.set(user_id, State.NONE)
     elif isinstance(update, CallbackQuery):
         callback_query: CallbackQuery = update
         user_id: int = callback_query.from_user.id
@@ -139,7 +135,7 @@ async def update_poll_info(update: Update) -> None:
         answer = await update.answer(reply_text, reply_markup=markup)
     else:
         answer = await update.message.edit_text(reply_text, reply_markup=markup)
-    message_holder.set_message(user_id, answer)
+    message_holder.set(user_id, answer)
 
 
 @poll_creator_router.callback_query(F.data == Callback.EDIT_POLL_DESCRIPTION)
@@ -147,14 +143,14 @@ async def edit_poll_description(callback_query: CallbackQuery) -> None:
     logging.info(f"edit_poll_description")
     user_id: int = callback_query.from_user.id
     await callback_query.answer(f"Editing poll description...")
-    state_holder.set_state(user_id, State.AWAITING_POLL_DESCRIPTION)
+    state_holder.set(user_id, State.AWAITING_POLL_DESCRIPTION)
 
     button_cancel = InlineKeyboardButton(text="Cancel", callback_data=Callback.DISCARD_CURRENT_POLL_CHANGES)
     markup = InlineKeyboardMarkup(inline_keyboard=[[button_cancel]])
     edited = await callback_query.message.edit_text(
         callback_query.message.text + f"\nPlease, enter new description:", reply_markup=markup
     )
-    message_holder.set_message(user_id, edited)
+    message_holder.set(user_id, edited)
 
 
 @poll_creator_router.callback_query(F.data == Callback.ADD_POLL_OPTION)
@@ -162,14 +158,14 @@ async def add_poll_option(callback_query: CallbackQuery) -> None:
     logging.info(f"add_poll_option")
     user_id: int = callback_query.from_user.id
     await callback_query.answer(f"Adding new option...")
-    state_holder.set_state(user_id, State.AWAITING_POLL_OPTION)
+    state_holder.set(user_id, State.AWAITING_POLL_OPTION)
 
     button_cancel = InlineKeyboardButton(text="Cancel", callback_data=Callback.DISCARD_CURRENT_POLL_CHANGES)
     markup = InlineKeyboardMarkup(inline_keyboard=[[button_cancel]])
     edited = await callback_query.message.edit_text(
         callback_query.message.text + f"\nPlease, enter new option:", reply_markup=markup
     )
-    message_holder.set_message(user_id, edited)
+    message_holder.set(user_id, edited)
 
 
 @poll_creator_router.callback_query(F.data == Callback.ENTER_EDIT_POLL_OPTIONS_SELECTION)
@@ -188,7 +184,7 @@ async def enter_edit_poll_option_selection(callback_query: CallbackQuery) -> Non
     edited = await callback_query.message.edit_text(
         callback_query.message.text + f"\nWhich option you would like to change?", reply_markup=markup
     )
-    message_holder.set_message(user_id, edited)
+    message_holder.set(user_id, edited)
 
 
 @poll_creator_router.callback_query(F.data == Callback.ENTER_DELETE_POLL_OPTIONS_SELECTION)
@@ -207,7 +203,7 @@ async def enter_delete_poll_option_selection(callback_query: CallbackQuery) -> N
     edited = await callback_query.message.edit_text(
         callback_query.message.text + f"\nWhich option you would like to delete?", reply_markup=markup
     )
-    message_holder.set_message(user_id, edited)
+    message_holder.set(user_id, edited)
 
 
 @poll_creator_router.callback_query(F.data.startswith(Callback.EDIT_POLL_OPTION))
@@ -219,13 +215,13 @@ async def edit_poll_option(callback_query: CallbackQuery) -> None:
     button_cancel = InlineKeyboardButton(text="Cancel", callback_data=Callback.DISCARD_CURRENT_POLL_CHANGES)
     markup = InlineKeyboardMarkup(inline_keyboard=[[button_cancel]])
     chosen_option: int = int(callback_query.data.lstrip(Callback.EDIT_POLL_OPTION + "_"))
-    state_holder.set_state(user_id, f"{State.AWAITING_EDITED_POLL_OPTION}_{chosen_option}")
+    state_holder.set(user_id, f"{State.AWAITING_EDITED_POLL_OPTION}_{chosen_option}")
     edited = await callback_query.message.edit_text(
         poll_drafts[user_id].to_str()
         + f"\nPlease, enter new option instead of [{chosen_option}]: {poll_drafts[user_id].options[chosen_option - 1]}",
         reply_markup=markup,
     )
-    message_holder.set_message(user_id, edited)
+    message_holder.set(user_id, edited)
 
 
 @poll_creator_router.callback_query(F.data == Callback.CANCEL_POLL_CREATION)
