@@ -16,13 +16,14 @@ from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 
+from routers.root import root_router
 from routers.initialiser import initializer_router
-from routers.bet_creator import bet_creator_router
-from routers.wager_maker import wager_maker_router
+from routers.polls.poll_creator import poll_creator_router
+from routers.polls.bet_maker import bet_maker_router
 from routers.empty_stub import empty_stub_router
 
 dispatcher = Dispatcher()
-dispatcher.include_routers(initializer_router, bet_creator_router, wager_maker_router, empty_stub_router)
+dispatcher.include_routers(root_router, initializer_router, poll_creator_router, bet_maker_router, empty_stub_router)
 
 
 class TelegramBot:

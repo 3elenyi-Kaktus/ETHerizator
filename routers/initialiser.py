@@ -20,5 +20,7 @@ async def start(message: Message) -> None:
         state_holder.set_state(user_id, State.NONE)
         storage.balances[user_id] = 0
 
-    answer = await message.answer(f"Welcome to ETHerizator bot, {html.bold(message.from_user.full_name)}!", reply_markup=None)
+    answer = await message.answer(
+        f"Welcome to ETHerizator bot, {html.bold(message.from_user.full_name)}!", reply_markup=None
+    )
     message_holder.set_message(user_id, answer)

@@ -6,21 +6,21 @@ class Wager:
     better_id: int
     amount: int
 
-# TODO delicate dance with initial supplies of 1 wei at every option
 
+# TODO delicate dance with initial supplies of 1 wei at every option
 @dataclass
-class BetOption:
+class PollOption:
     id: int
     description: str
     wagers: dict[int, Wager] = field(default_factory=dict)
     supply: int = 1
 
 
-class Bet:
+class Poll:
     def __init__(self, id_: int, description: str, options: list[str]):
         self.id: int = id_
         self.description: str = description
-        self.options: list[BetOption] = [BetOption(i, x) for i, x in enumerate(options, start=0)]
+        self.options: list[PollOption] = [PollOption(i, x) for i, x in enumerate(options, start=0)]
         self.total_supply: int = len(self.options)
 
     def get_total_supply(self) -> int:
